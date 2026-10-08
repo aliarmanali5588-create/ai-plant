@@ -1,0 +1,6 @@
+{
+  "name": "PlantCare AI",
+  "description": "An AI-powered plant disease detection and advisory assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
