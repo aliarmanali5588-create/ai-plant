@@ -115,11 +115,11 @@ class PlantCareViewModel : ViewModel() {
                     navigateTo(Screen.ImagePreview(imageUri, false))
                 }
             } catch (e: IllegalArgumentException) {
-                _currentScreen.value = Screen.Error("We couldn't analyze this image. [DEBUG: ${e.message}]") {
+                _currentScreen.value = Screen.Error("We couldn't analyze this image. Try taking a clearer photo of the leaf.") {
                     navigateTo(Screen.ImagePreview(imageUri, false))
                 }
             } catch (e: Exception) {
-                _currentScreen.value = Screen.Error("Something went wrong. [DEBUG: ${e.javaClass.simpleName}: ${e.message}]") {
+                _currentScreen.value = Screen.Error("Something went wrong. Our AI analysis service is temporarily unavailable. Please try again.") {
                     navigateTo(Screen.ImagePreview(imageUri, false))
                 }
             }
