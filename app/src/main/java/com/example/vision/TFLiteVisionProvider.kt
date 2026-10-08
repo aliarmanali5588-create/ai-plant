@@ -36,6 +36,7 @@ class TFLiteVisionProvider : VisionProvider {
     private fun getInterpreter(context: Context): Interpreter {
         return interpreter ?: synchronized(this) {
             interpreter ?: run {
+                Log.d(TAG, "[PC][5] Opening model file: $MODEL_FILE")
                 val fileDescriptor = context.assets.openFd(MODEL_FILE)
                 val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
                 val fileChannel = inputStream.channel
@@ -46,70 +47,100 @@ class TFLiteVisionProvider : VisionProvider {
                 val options = Interpreter.Options().apply {
                     setNumThreads(4)
                 }
-                Interpreter(modelBuffer, options).also { interpreter = it }
+                val interp = Interpreter(modelBuffer, options)
+                
+                // Verify input tensor
+                val inputTensor = interp.getInputTensor(0)
+                Log.d(TAG, "[PC][5] Model Input: shape=${inputTensor.shape().contentToString()}, type=${inputTensor.dataType()}")
+                val outputTensor = interp.getOutputTensor(0)
+                Log.d(TAG, "[PC][5] Model Output: shape=${outputTensor.shape().contentToString()}, type=${outputTensor.dataType()}")
+                
+                interp.also { interpreter = it }
             }
         }
     }
 
     override suspend fun analyze(context: Context, imageUri: Uri): PlantAnalysisResult = withContext(Dispatchers.IO) {
-        Log.i(TAG, "Analysis request started for URI: $imageUri")
+        Log.d(TAG, "[PC][1] IMAGE_URI: $imageUri (scheme: ${imageUri.scheme})")
+        Log.d(TAG, "[PC][ENV] PackageName: ${context.packageName}")
+        
+        try {
+            // Check file size
+            context.contentResolver.openAssetFileDescriptor(imageUri, "r")?.use { afd ->
+                Log.d(TAG, "[PC][1] URI File Size: ${afd.length} bytes")
+            } ?: Log.w(TAG, "[PC][1] Could not determine file size for URI")
 
-        // 1. Image preprocessing and validation
-        val bitmap = decodeSampledBitmapFromUri(context, imageUri, 1024, 1024)
-            ?: throw IllegalArgumentException("Could not decode image from URI.")
-        Log.i(TAG, "Image prepared. Original decoded size: ${bitmap.width}x${bitmap.height}")
+            // 1. Image preprocessing and validation
+            Log.d(TAG, "[PC][2] BITMAP_DECODE START")
+            val bitmap = decodeSampledBitmapFromUri(context, imageUri, 1024, 1024)
+                ?: throw IllegalArgumentException("BitmapFactory returned null for URI: $imageUri")
+            Log.d(TAG, "[PC][3] BITMAP_SIZE: ${bitmap.width}x${bitmap.height}, config=${bitmap.config}, byteCount=${bitmap.byteCount}")
 
-        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, true)
-        val inputBuffer = convertBitmapToByteBuffer(resizedBitmap)
+            Log.d(TAG, "[PC][4] PREPROCESS START")
+            val resizedBitmap = Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, true)
+            val inputBuffer = convertBitmapToByteBuffer(resizedBitmap)
+            Log.d(TAG, "[PC][4] PREPROCESS COMPLETE: inputBuffer capacity=${inputBuffer.capacity()}")
 
-        // 2. Prepare output tensor [1, NUM_CLASSES]
-        val outputProbabilities = Array(1) { FloatArray(NUM_CLASSES) }
+            // 2. Prepare output tensor [1, NUM_CLASSES]
+            val outputProbabilities = Array(1) { FloatArray(NUM_CLASSES) }
 
-        // 3. Run inference
-        Log.i(TAG, "Request sent to pre-trained vision model")
-        val interp = getInterpreter(context)
-        interp.run(inputBuffer, outputProbabilities)
-        Log.i(TAG, "Response received from model")
+            // 3. Run inference
+            Log.d(TAG, "[PC][5] MODEL_LOAD START")
+            val interp = getInterpreter(context)
+            Log.d(TAG, "[PC][5] MODEL_LOAD COMPLETE")
 
-        val rawScores = outputProbabilities[0]
+            Log.d(TAG, "[PC][7] INFERENCE_START")
+            synchronized(interp) {
+                interp.run(inputBuffer, outputProbabilities)
+            }
+            Log.d(TAG, "[PC][8] INFERENCE_END")
 
-        // 4. Calculate calibrated probabilities (Softmax if raw logits)
-        val probabilities = calculateProbabilities(rawScores)
+            val rawScores = outputProbabilities[0]
+            Log.d(TAG, "[PC][9] OUTPUT_TENSOR RECEIVED: rawScores size=${rawScores.size}")
 
-        // 5. Rank predictions
-        val rankedIndices = probabilities.indices
-            .sortedByDescending { probabilities[it] }
+            // 4. Calculate calibrated probabilities (Softmax if raw logits)
+            val probabilities = calculateProbabilities(rawScores)
 
-        val topKIndices = rankedIndices.take(TOP_K)
+            // 5. Rank predictions
+            val rankedIndices = probabilities.indices
+                .sortedByDescending { probabilities[it] }
 
-        val topPredictions = topKIndices.map { index ->
-            val rawClass = PlantLabelParser.PLANT_VILLAGE_CLASSES.getOrElse(index) { "Unknown" }
-            val formattedName = PlantLabelParser.formatPredictionName(rawClass)
-            val score = probabilities[index]
-            Prediction(name = formattedName, confidence = score)
+            val topKIndices = rankedIndices.take(TOP_K)
+
+            val topPredictions = topKIndices.map { index ->
+                val rawClass = PlantLabelParser.PLANT_VILLAGE_CLASSES.getOrElse(index) { "Unknown" }
+                val formattedName = PlantLabelParser.formatPredictionName(rawClass)
+                val score = probabilities[index]
+                Prediction(name = formattedName, confidence = score)
+            }
+
+            val topIndex = rankedIndices.firstOrNull() ?: 0
+            val topScore = probabilities.getOrElse(topIndex) { 0f }
+            val topRawLabel = PlantLabelParser.PLANT_VILLAGE_CLASSES.getOrElse(topIndex) { "Unknown" }
+
+            Log.d(TAG, "[PC][10] PREDICTION: $topRawLabel ($topScore)")
+
+            // 6. Parse structured plant and disease information
+            val parsed = PlantLabelParser.parse(topRawLabel)
+
+            val isLowConfidence = topScore < PlantAnalysisResult.LOW_CONFIDENCE_THRESHOLD
+
+            PlantAnalysisResult(
+                plant = parsed.plant,
+                disease = parsed.disease,
+                confidence = topScore,
+                predictions = topPredictions,
+                explanation = parsed.explanation,
+                advice = parsed.advice,
+                isLowConfidence = isLowConfidence,
+                confidenceLabel = if (isLowConfidence) "Low confidence" else "High confidence"
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "[PC][ERROR] Stage failed")
+            Log.e(TAG, "Exception: ${e.javaClass.name}: ${e.message}")
+            Log.e(TAG, "Stack trace: ${Log.getStackTraceString(e)}")
+            throw e
         }
-
-        val topIndex = rankedIndices.firstOrNull() ?: 0
-        val topScore = probabilities.getOrElse(topIndex) { 0f }
-        val topRawLabel = PlantLabelParser.PLANT_VILLAGE_CLASSES.getOrElse(topIndex) { "Unknown" }
-
-        Log.i(TAG, "Prediction parsed: $topRawLabel with score $topScore")
-
-        // 6. Parse structured plant and disease information
-        val parsed = PlantLabelParser.parse(topRawLabel)
-
-        val isLowConfidence = topScore < PlantAnalysisResult.LOW_CONFIDENCE_THRESHOLD
-
-        PlantAnalysisResult(
-            plant = parsed.plant,
-            disease = parsed.disease,
-            confidence = topScore,
-            predictions = topPredictions,
-            explanation = parsed.explanation,
-            advice = parsed.advice,
-            isLowConfidence = isLowConfidence,
-            confidenceLabel = if (isLowConfidence) "Low confidence" else "High confidence"
-        )
     }
 
     private fun calculateProbabilities(scores: FloatArray): FloatArray {
@@ -176,24 +207,42 @@ class TFLiteVisionProvider : VisionProvider {
     ): Bitmap? {
         var stream: InputStream? = null
         return try {
+            Log.d(TAG, "[PC][2] Opening input stream for URI: $uri")
             stream = context.contentResolver.openInputStream(uri)
+            if (stream == null) {
+                Log.e(TAG, "[PC][2] openInputStream returned null")
+                return null
+            }
+            
             val options = BitmapFactory.Options().apply {
                 inJustDecodeBounds = true
             }
             BitmapFactory.decodeStream(stream, null, options)
-            stream?.close()
+            stream.close()
+            
+            Log.d(TAG, "[PC][2] Image bounds: ${options.outWidth}x${options.outHeight}, mimeType: ${options.outMimeType}")
+
+            if (options.outWidth <= 0 || options.outHeight <= 0) {
+                Log.e(TAG, "[PC][2] Invalid image bounds detected")
+                return null
+            }
 
             // Calculate inSampleSize
             options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
             options.inJustDecodeBounds = false
+            Log.d(TAG, "[PC][2] Using inSampleSize: ${options.inSampleSize}")
 
             stream = context.contentResolver.openInputStream(uri)
-            BitmapFactory.decodeStream(stream, null, options)
+            val bitmap = BitmapFactory.decodeStream(stream, null, options)
+            if (bitmap == null) {
+                Log.e(TAG, "[PC][2] BitmapFactory.decodeStream returned null")
+            }
+            bitmap
         } catch (e: Exception) {
-            Log.e(TAG, "Error decoding image from URI", e)
+            Log.e(TAG, "[PC][2] Error decoding image from URI", e)
             null
         } finally {
-            stream?.close()
+            try { stream?.close() } catch (ignored: Exception) {}
         }
     }
 
