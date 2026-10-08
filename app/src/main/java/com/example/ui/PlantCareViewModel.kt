@@ -107,19 +107,19 @@ class PlantCareViewModel : ViewModel() {
                 )
                 _currentScreen.value = Screen.Result(result, imageUri)
             } catch (e: TimeoutCancellationException) {
-                _currentScreen.value = Screen.Error("The analysis is taking too long. Please try again.") {
+                _currentScreen.value = Screen.Error("The analysis is taking too long. [TIMEOUT] ${e.message}") {
                     navigateTo(Screen.ImagePreview(imageUri, false))
                 }
             } catch (e: UnknownHostException) {
-                _currentScreen.value = Screen.Error("🌐 No internet connection\n\nPlantCare AI needs an internet connection to analyze this image. Please check your connection and try again.") {
+                _currentScreen.value = Screen.Error("🌐 No internet connection\n\nPlantCare AI needs an internet connection to analyze this image. [NET] ${e.message}") {
                     navigateTo(Screen.ImagePreview(imageUri, false))
                 }
             } catch (e: IllegalArgumentException) {
-                _currentScreen.value = Screen.Error("We couldn't analyze this image. Try taking a clearer photo of the leaf.") {
+                _currentScreen.value = Screen.Error("We couldn't analyze this image. [ARG] ${e.javaClass.simpleName}: ${e.message}") {
                     navigateTo(Screen.ImagePreview(imageUri, false))
                 }
             } catch (e: Exception) {
-                _currentScreen.value = Screen.Error("Something went wrong. Our AI analysis service is temporarily unavailable. Please try again.") {
+                _currentScreen.value = Screen.Error("Something went wrong. [ERR] ${e.javaClass.simpleName}: ${e.message}") {
                     navigateTo(Screen.ImagePreview(imageUri, false))
                 }
             }

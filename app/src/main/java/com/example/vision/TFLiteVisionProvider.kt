@@ -64,37 +64,43 @@ class TFLiteVisionProvider : VisionProvider {
         Log.d(TAG, "[PC][1] IMAGE_URI: $imageUri (scheme: ${imageUri.scheme})")
         Log.d(TAG, "[PC][ENV] PackageName: ${context.packageName}")
         
+        var currentStage = "INIT"
         try {
             // Check file size
+            currentStage = "FILE_SIZE_CHECK"
             context.contentResolver.openAssetFileDescriptor(imageUri, "r")?.use { afd ->
                 Log.d(TAG, "[PC][1] URI File Size: ${afd.length} bytes")
             } ?: Log.w(TAG, "[PC][1] Could not determine file size for URI")
 
             // 1. Image preprocessing and validation
+            currentStage = "BITMAP_DECODE"
             Log.d(TAG, "[PC][2] BITMAP_DECODE START")
             val bitmap = decodeSampledBitmapFromUri(context, imageUri, 1024, 1024)
                 ?: throw IllegalArgumentException("BitmapFactory returned null for URI: $imageUri")
             Log.d(TAG, "[PC][3] BITMAP_SIZE: ${bitmap.width}x${bitmap.height}, config=${bitmap.config}, byteCount=${bitmap.byteCount}")
 
+            currentStage = "MODEL_LOAD"
+            Log.d(TAG, "[PC][5] MODEL_LOAD START")
+            val interp = getInterpreter(context)
+            Log.d(TAG, "[PC][5] MODEL_LOAD COMPLETE")
+
+            currentStage = "PREPROCESS"
             Log.d(TAG, "[PC][4] PREPROCESS START")
             val resizedBitmap = Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, true)
-            val inputBuffer = convertBitmapToByteBuffer(resizedBitmap)
+            val inputBuffer = convertBitmapToByteBuffer(resizedBitmap, interp)
             Log.d(TAG, "[PC][4] PREPROCESS COMPLETE: inputBuffer capacity=${inputBuffer.capacity()}")
 
             // 2. Prepare output tensor [1, NUM_CLASSES]
             val outputProbabilities = Array(1) { FloatArray(NUM_CLASSES) }
 
-            // 3. Run inference
-            Log.d(TAG, "[PC][5] MODEL_LOAD START")
-            val interp = getInterpreter(context)
-            Log.d(TAG, "[PC][5] MODEL_LOAD COMPLETE")
-
+            currentStage = "INFERENCE"
             Log.d(TAG, "[PC][7] INFERENCE_START")
             synchronized(interp) {
                 interp.run(inputBuffer, outputProbabilities)
             }
             Log.d(TAG, "[PC][8] INFERENCE_END")
 
+            currentStage = "OUTPUT_PROCESSING"
             val rawScores = outputProbabilities[0]
             Log.d(TAG, "[PC][9] OUTPUT_TENSOR RECEIVED: rawScores size=${rawScores.size}")
 
@@ -102,6 +108,7 @@ class TFLiteVisionProvider : VisionProvider {
             val probabilities = calculateProbabilities(rawScores)
 
             // 5. Rank predictions
+            currentStage = "RANKING"
             val rankedIndices = probabilities.indices
                 .sortedByDescending { probabilities[it] }
 
@@ -121,6 +128,7 @@ class TFLiteVisionProvider : VisionProvider {
             Log.d(TAG, "[PC][10] PREDICTION: $topRawLabel ($topScore)")
 
             // 6. Parse structured plant and disease information
+            currentStage = "PARSING"
             val parsed = PlantLabelParser.parse(topRawLabel)
 
             val isLowConfidence = topScore < PlantAnalysisResult.LOW_CONFIDENCE_THRESHOLD
@@ -136,10 +144,11 @@ class TFLiteVisionProvider : VisionProvider {
                 confidenceLabel = if (isLowConfidence) "Low confidence" else "High confidence"
             )
         } catch (e: Exception) {
-            Log.e(TAG, "[PC][ERROR] Stage failed")
+            Log.e(TAG, "[PC][ERROR] Stage $currentStage failed")
             Log.e(TAG, "Exception: ${e.javaClass.name}: ${e.message}")
             Log.e(TAG, "Stack trace: ${Log.getStackTraceString(e)}")
-            throw e
+            // Throw a wrapped exception with stage info
+            throw RuntimeException("Stage $currentStage failed: ${e.message}", e)
         }
     }
 
@@ -175,25 +184,47 @@ class TFLiteVisionProvider : VisionProvider {
         return expValues
     }
 
-    private fun convertBitmapToByteBuffer(bitmap: Bitmap): ByteBuffer {
-        val byteBuffer = ByteBuffer.allocateDirect(4 * INPUT_SIZE * INPUT_SIZE * 3)
+    private fun convertBitmapToByteBuffer(bitmap: Bitmap, interp: Interpreter): ByteBuffer {
+        val inputTensor = interp.getInputTensor(0)
+        val shape = inputTensor.shape() // e.g., [1, 224, 224, 3]
+        val dataType = inputTensor.dataType()
+        
+        val batchSize = if (shape.isNotEmpty()) shape[0] else 1
+        val height = if (shape.size >= 2) shape[1] else INPUT_SIZE
+        val width = if (shape.size >= 3) shape[2] else INPUT_SIZE
+        val channels = if (shape.size >= 4) shape[3] else 3
+        
+        val byteSize = when (dataType) {
+            org.tensorflow.lite.DataType.FLOAT32 -> 4
+            org.tensorflow.lite.DataType.INT8, org.tensorflow.lite.DataType.UINT8 -> 1
+            else -> 4 // Default to 4
+        }
+        
+        Log.d(TAG, "[PC][6] INPUT_TENSOR DATA: batch=$batchSize, h=$height, w=$width, c=$channels, type=$dataType, byteSize=$byteSize")
+        
+        val byteBuffer = ByteBuffer.allocateDirect(batchSize * height * width * channels * byteSize)
         byteBuffer.order(ByteOrder.nativeOrder())
 
-        val intValues = IntArray(INPUT_SIZE * INPUT_SIZE)
-        bitmap.getPixels(intValues, 0, INPUT_SIZE, 0, 0, INPUT_SIZE, INPUT_SIZE)
+        val intValues = IntArray(width * height)
+        bitmap.getPixels(intValues, 0, width, 0, 0, width, height)
 
         var pixel = 0
-        for (i in 0 until INPUT_SIZE) {
-            for (j in 0 until INPUT_SIZE) {
+        for (i in 0 until height) {
+            for (j in 0 until width) {
                 val value = intValues[pixel++]
-                // Normalize RGB pixels to [0.0f, 1.0f]
-                val r = ((value shr 16) and 0xFF) / 255.0f
-                val g = ((value shr 8) and 0xFF) / 255.0f
-                val b = (value and 0xFF) / 255.0f
+                val r = ((value shr 16) and 0xFF)
+                val g = ((value shr 8) and 0xFF)
+                val b = (value and 0xFF)
 
-                byteBuffer.putFloat(r)
-                byteBuffer.putFloat(g)
-                byteBuffer.putFloat(b)
+                if (dataType == org.tensorflow.lite.DataType.FLOAT32) {
+                    byteBuffer.putFloat(r / 255.0f)
+                    byteBuffer.putFloat(g / 255.0f)
+                    byteBuffer.putFloat(b / 255.0f)
+                } else {
+                    byteBuffer.put(r.toByte())
+                    byteBuffer.put(g.toByte())
+                    byteBuffer.put(b.toByte())
+                }
             }
         }
         return byteBuffer
