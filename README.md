@@ -495,7 +495,7 @@ Camera → Prediction → LLM Advisory
 
 Complete source code GitHub repository me available hai.
 
-👉 **[💻 View Source Code](https://github.com/aliarmanal5588-create/ai-plant)**
+👉 **[💻 View Source Code](https://github.com/aliarmanali5588-create/ai-plant.git)**
 
 ---
 
@@ -503,7 +503,7 @@ Complete source code GitHub repository me available hai.
 
 Latest release APK GitHub Releases par available hai.
 
-👉 **[📱 Download Latest APK](https://github.com/aliarmanal5588-create/ai-plant/releases/latest/download/app-release.apk)**
+👉 **[📱 Download Latest APK](https://github.com/aliarmanali5588-create/ai-plant/releases/tag/v1.0.0)**
 
 APK download karne ke baad Android device par install kiya ja sakta hai.
 
