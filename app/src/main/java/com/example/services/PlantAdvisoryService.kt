@@ -28,7 +28,7 @@ class PlantAdvisoryService {
         .build()
 
     private val retrofit = Retrofit.Builder()
-        .baseUrl("https://plant-llm.aliarmanal5588.workers.dev/")
+        .baseUrl("https://ai-plant.aliarmanal5588.workers.dev/")
         .client(okHttpClient)
         .addConverterFactory(MoshiConverterFactory.create(moshi))
         .build()
