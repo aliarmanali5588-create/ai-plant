@@ -1,15 +1,14 @@
-```markdown
 # 🌿 PlantCare AI
 
 ### On-Device Plant Disease Detection + LLM-Powered Plant Health Advisory
 
-PlantCare AI ek Android application hai jo plant/leaf ki photo lekar uska health status aur possible disease identify karta hai. Iske baad detected result ko use karke ek Large Language Model (LLM) user ko simple language me plant-care guidance deta hai.
+PlantCare AI ek Android application hai jo plant ya leaf ki photo lekar uska health status aur possible disease identify karta hai. Iske baad detected result ko use karke ek Large Language Model (LLM) user ko simple language me plant-care guidance deta hai.
 
 Project ka main goal hai ki plant diagnosis fast ho, basic image analysis device par hi ho, aur detailed guidance LLM ke through generate ho.
 
 ---
 
-# 📱 PlantCare AI Kya Hai?
+## 📱 PlantCare AI Kya Hai?
 
 PlantCare AI ek Android-based plant health assistant hai.
 
@@ -23,14 +22,14 @@ Photo milne ke baad app:
 1. Image ko process karta hai.
 2. On-device TensorFlow Lite model image ka analysis karta hai.
 3. Plant/disease prediction aur confidence score generate hota hai.
-4. Ye structured diagnosis backend ko bheja jata hai.
+4. Structured diagnosis backend ko bheja jata hai.
 5. Backend Groq ke Large Language Model (LLM) ko request bhejta hai.
 6. LLM plant ke liye detailed guidance generate karta hai.
 7. Final advisory Android app me display hoti hai.
 
 ---
 
-# 🎯 Project ka Main Objective
+## 🎯 Project ka Main Objective
 
 PlantCare AI ka objective hai:
 
@@ -39,55 +38,43 @@ PlantCare AI ka objective hai:
 - Prediction ke saath confidence score dikhana
 - LLM ke through easy-to-understand plant-care guidance dena
 - Treatment aur prevention ke practical suggestions dena
-- User ko unnecessary technical information ke bina simple advice dena
+- User ko simple aur useful advice dena
 
 ---
 
-# 🧠 Technology kaise use hui hai?
+## 🧠 Technology Kaise Use Hui Hai?
 
 Is project me do important technology layers hain.
 
-## 1. On-Device Machine Learning
+### 1. On-Device Machine Learning
 
 Plant/disease classification ke liye TensorFlow Lite model use kiya gaya hai.
 
-Model:
+**Model:** `plant_disease_model.tflite`
 
 ```text
-plant_disease_model.tflite
+Plant Image
+    ↓
+TensorFlow Lite Model
+    ↓
+Plant / Disease Prediction
+    ↓
+Confidence Score
 ```
 
 Ye model Android device ke andar run hota hai.
 
-Iska matlab:
+Iska benefit ye hai ki initial image classification ke liye har baar cloud vision service par depend nahi karna padta.
 
-```text
-Plant Image
-     ↓
-TensorFlow Lite Model
-     ↓
-Plant / Disease Prediction
-     ↓
-Confidence Score
-```
-
-Image classification ke liye device ko har baar cloud vision service par depend nahi karna padta.
-
----
-
-## 2. Large Language Model (LLM)
+### 2. Large Language Model (LLM)
 
 Detailed plant-care guidance generate karne ke liye Large Language Model use kiya gaya hai.
 
-LLM backend ke through Groq par run hota hai.
+**LLM Provider:** Groq
 
-Current LLM model:
+**Current LLM Model:** `llama-3.3-70b-versatile`
 
-```text
-llama-3.3-70b-versatile
-```
-
-LLM ko diagnosis ka raw image directly dene ke bajay application pehle structured plant analysis create karta hai.
+LLM ko raw image directly dene ke bajay application pehle structured plant analysis create karta hai.
 
 Example:
 
@@ -103,89 +90,83 @@ Backend LLM se detailed guidance generate karwata hai.
 
 ---
 
-# 🏗️ Complete Architecture
+## 🏗️ Complete Architecture
 
 PlantCare AI ka complete flow:
 
 ```text
-┌──────────────────────┐
-│      Android App     │
-│                      │
-│ Camera / Gallery     │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ Image Processing     │
-│ & Preprocessing      │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ TensorFlow Lite      │
-│ On-Device Model      │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ Plant / Disease      │
-│ Prediction           │
-│ + Confidence         │
-└──────────┬───────────┘
-           │
-           │ HTTPS
-           ▼
-┌──────────────────────┐
-│ Cloudflare Worker    │
-│ Backend API          │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ Groq                 │
-│ Large Language Model │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ Structured Advisory  │
-│ Symptoms             │
-│ Treatment            │
-│ Prevention           │
-│ Caution              │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ Android Advisory UI  │
-└──────────────────────┘
+┌────────────────────────┐
+│      Android App       │
+│                        │
+│   Camera / Gallery     │
+└────────────┬───────────┘
+             │
+             ▼
+┌────────────────────────┐
+│ Image Processing       │
+│ & Preprocessing        │
+└────────────┬───────────┘
+             │
+             ▼
+┌────────────────────────┐
+│ TensorFlow Lite        │
+│ On-Device Model        │
+└────────────┬───────────┘
+             │
+             ▼
+┌────────────────────────┐
+│ Plant / Disease        │
+│ Prediction             │
+│ + Confidence           │
+└────────────┬───────────┘
+             │
+             │ HTTPS
+             ▼
+┌────────────────────────┐
+│ Cloudflare Worker      │
+│ Backend API            │
+└────────────┬───────────┘
+             │
+             ▼
+┌────────────────────────┐
+│ Groq                   │
+│ Large Language Model   │
+└────────────┬───────────┘
+             │
+             ▼
+┌────────────────────────┐
+│ Structured Advisory    │
+│ Symptoms               │
+│ Treatment              │
+│ Prevention             │
+│ Caution                │
+└────────────┬───────────┘
+             │
+             ▼
+┌────────────────────────┐
+│ Android Advisory UI    │
+└────────────────────────┘
 ```
 
 ---
 
-# 🧩 Main Features
+## 🧩 Main Features
 
-## 📷 Camera Analysis
+### 📷 Camera Analysis
 
 User directly camera se plant ki photo capture kar sakta hai.
 
 App captured image ko process karke TensorFlow Lite model ke through prediction generate karta hai.
 
----
-
-## 🖼️ Gallery Analysis
+### 🖼️ Gallery Analysis
 
 User gallery se existing plant image choose kar sakta hai.
 
-Android system photo picker ka use karke image securely select hoti hai.
+Android system photo picker ka use karke image select hoti hai.
 
----
-
-## 🔬 On-Device Disease Detection
+### 🔬 On-Device Disease Detection
 
 Plant image ka initial analysis device ke andar TensorFlow Lite model se hota hai.
-
-Model multiple plant/disease classes ke against prediction karta hai.
 
 Result me:
 
@@ -196,9 +177,7 @@ Result me:
 
 dikhaye ja sakte hain.
 
----
-
-## 🧠 LLM Advisory
+### 🧠 LLM Advisory
 
 Diagnosis ke baad backend LLM detailed guidance generate karta hai.
 
@@ -212,9 +191,7 @@ LLM advisory me include ho sakta hai:
 - When to seek expert help
 - Caution / safety information
 
----
-
-## 📊 Confidence Score
+### 📊 Confidence Score
 
 Prediction ke saath model confidence bhi display hota hai.
 
@@ -235,23 +212,21 @@ Black Rot          22%
 Powdery Mildew      2%
 ```
 
----
-
-## 🔄 Retry Support
+### 🔄 Retry Support
 
 Agar advisory request fail hoti hai ya network problem aati hai, user retry kar sakta hai.
 
----
-
-## 🌗 Light / Dark Theme
+### 🌗 Light / Dark Theme
 
 Application light aur dark theme support karta hai.
 
-UI Claymorphism-inspired visual style follow karta hai.
+### 🎨 Claymorphism UI
+
+Application soft, rounded aur organic Claymorphism-inspired visual style use karta hai.
 
 ---
 
-# 🎨 UI Design
+## 🎨 UI Design
 
 PlantCare AI ka visual design organic aur soft clay-style interface par based hai.
 
@@ -270,9 +245,9 @@ UI ka main goal hai ki application modern hone ke saath easy-to-understand bhi r
 
 ---
 
-# 🧱 Technology Stack
+## 🧱 Technology Stack
 
-## Android
+### Android
 
 - Kotlin
 - Jetpack Compose
@@ -281,25 +256,25 @@ UI ka main goal hai ki application modern hone ke saath easy-to-understand bhi r
 - Camera integration
 - Android system photo picker
 
-## Machine Learning
+### Machine Learning
 
 - TensorFlow Lite
 - Pre-trained plant disease classification model
 - On-device inference
 - MobileNet-based architecture
 
-## Backend
+### Backend
 
 - Cloudflare Workers
 - JavaScript Worker runtime
 - HTTPS REST API
 
-## LLM
+### LLM
 
 - Groq
 - `llama-3.3-70b-versatile`
 
-## Networking
+### Networking
 
 - Retrofit
 - OkHttp
@@ -307,7 +282,7 @@ UI ka main goal hai ki application modern hone ke saath easy-to-understand bhi r
 
 ---
 
-# 🔐 Security
+## 🔐 Security
 
 PlantCare AI ka important security rule hai:
 
@@ -333,17 +308,15 @@ Iska benefit ye hai ki sensitive Groq credential client-side APK me expose nahi 
 
 ---
 
-# 🌐 Backend API
+## 🌐 Backend API
 
 Production backend Cloudflare Worker par deployed hai.
 
-Base URL:
+### Base URL
 
-```text
-https://ai-plant.aliarmanal5588.workers.dev
-```
+`https://ai-plant.aliarmanal5588.workers.dev`
 
-## Health Check
+### Health Check
 
 ```http
 GET /health
@@ -358,9 +331,7 @@ Expected response:
 }
 ```
 
----
-
-## Advisory API
+### Advisory API
 
 ```http
 POST /api/advisory
@@ -382,17 +353,21 @@ PlantAdvisory
 
 ---
 
-# 📦 Android Application ID
+## 📦 Android Application Details
 
-```text
-com.aistudio.plantcareai.plcrf
-```
+**Application Name:** PlantCare AI 🌿
+
+**Application ID:** `com.aistudio.plantcareai.plcrf`
+
+**Version:** 1.0
+
+**Platform:** Android
+
+**Release APK:** ~38 MB
 
 ---
 
-# 📁 Important Project Structure
-
-Project ka high-level structure kuch is tarah hai:
+## 📁 Important Project Structure
 
 ```text
 ai-plant/
@@ -429,43 +404,45 @@ ai-plant/
 
 ---
 
-# 🤖 LLM ka Role
+## 🤖 LLM Ka Role
 
 Is project me LLM ka role primarily **natural-language advisory generation** hai.
 
-TFLite model:
+TFLite model plant/disease condition identify karta hai.
+
+Example:
 
 ```text
-"Plant me Bacterial Spot detect hua."
+Plant me Bacterial Spot detect hua.
 ```
 
-LLM:
+Uske baad LLM user ko natural language me guidance deta hai:
 
 ```text
-"Is condition ke common symptoms ye ho sakte hain..."
+Is condition ke common symptoms ye ho sakte hain...
 
-"Plant ko improve karne ke liye ye steps try karein..."
+Plant ko improve karne ke liye ye steps try karein...
 
-"Future me infection prevent karne ke liye..."
+Future me infection prevent karne ke liye...
 
-"Severe condition me expert help lene par consider karein..."
+Severe condition me expert help lene par consider karein...
 ```
 
-Isliye PlantCare AI ke architecture ko simple way me is tarah describe kiya ja sakta hai:
+Isliye PlantCare AI ke architecture ko simple way me describe kiya ja sakta hai:
 
 > **On-Device Machine Learning for detection + Large Language Model for intelligent advisory.**
 
 ---
 
-# 🧪 Testing
+## 🧪 Testing
 
 Project me multiple levels par testing ki gayi hai.
 
-## Build Testing
+### Build Testing
 
 Android project ka release build successfully generate kiya gaya.
 
-## Unit / Robolectric Testing
+### Unit / Robolectric Testing
 
 Testing me important application logic verify kiya gaya, including:
 
@@ -476,7 +453,7 @@ Testing me important application logic verify kiya gaya, including:
 - API response parsing
 - ViewModel state transitions
 
-## Real Device Testing
+### Real Device Testing
 
 Application ko real Android device par test kiya gaya.
 
@@ -486,17 +463,13 @@ Tested flows:
 Gallery → Prediction → LLM Advisory
 ```
 
-and
-
 ```text
 Camera → Prediction → LLM Advisory
 ```
 
 ---
 
-# ✅ Current Demo Status
-
-Current application flow:
+## ✅ Current Demo Status
 
 ```text
 ✅ App Launch
@@ -513,49 +486,28 @@ Current application flow:
 ✅ Light Theme
 ✅ Dark Theme
 ✅ Release APK
+✅ Real Device Testing
 ```
 
 ---
 
-# 📱 Release APK
+## 💻 Source Code
 
-Release APK:
+Complete source code GitHub repository me available hai.
 
-```text
-app/build/outputs/apk/release/app-release.apk
-```
-
-Application ID:
-
-```text
-com.aistudio.plantcareai.plcrf
-```
+👉 **[💻 View Source Code](https://github.com/aliarmanal5588-create/ai-plant)**
 
 ---
 
-# 🚀 App Kaise Run Karein?
+## 📱 Download PlantCare AI APK
 
-## Method 1 — Android Studio
+Latest release APK GitHub Releases par available hai.
 
-Project ko Android Studio me open karein.
+👉 **[📱 Download Latest APK](https://github.com/aliarmanal5588-create/ai-plant/releases/latest/download/app-release.apk)**
 
-Gradle sync complete hone ke baad Android device ya emulator connect karein.
+APK download karne ke baad Android device par install kiya ja sakta hai.
 
-Phir application run karein.
-
----
-
-## Method 2 — Release APK
-
-Release APK ko Android device par install karein.
-
-APK path:
-
-```text
-app/build/outputs/apk/release/app-release.apk
-```
-
-Install hone ke baad:
+Typical usage:
 
 ```text
 PlantCare AI
@@ -571,7 +523,23 @@ LLM Advisory
 
 ---
 
-# 🌱 Demo Flow
+## 🚀 App Kaise Run Karein?
+
+### Method 1 — Android Studio
+
+Project ko Android Studio me open karein.
+
+Gradle sync complete hone ke baad Android device ya emulator connect karein.
+
+Phir application run karein.
+
+### Method 2 — Release APK
+
+GitHub Releases se latest APK download karein aur Android device par install karein.
+
+---
+
+## 🌱 Demo Flow
 
 Ek typical demo me ye steps follow kiye ja sakte hain:
 
@@ -617,22 +585,22 @@ App user ko guidance display karega.
 
 ---
 
-# 🧠 Why On-Device ML + LLM?
+## 🧠 Why On-Device ML + LLM?
 
 PlantCare AI ka architecture intentionally hybrid hai.
 
-## On-Device ML ka benefit
+### On-Device ML ka benefit
 
 - Fast initial prediction
 - Image classification device par hoti hai
 - Cloud vision service par dependency kam hoti hai
 - Basic diagnosis ke liye local inference available hai
 
-## LLM ka benefit
+### LLM ka benefit
 
-Traditional classification model sirf label de sakta hai.
+Traditional classification model mainly ek prediction label provide karta hai.
 
-LLM us label ko human-readable guidance me convert kar sakta hai.
+LLM us result ko human-readable guidance me convert kar sakta hai.
 
 Example:
 
@@ -655,17 +623,55 @@ Is combination se detection aur explanation dono possible hote hain.
 
 ---
 
-# ⚠️ Important Disclaimer
+## 🔄 Complete Data Flow
 
-PlantCare AI ek educational and informational application hai.
+```text
+User Plant Photo
+       ↓
+Android App
+       ↓
+TensorFlow Lite
+       ↓
+Plant / Disease Prediction
+       ↓
+Confidence Score
+       ↓
+Cloudflare Worker
+       ↓
+Groq LLM
+       ↓
+LLM Generated Guidance
+       ↓
+Android Advisory Screen
+```
 
-Iske predictions aur recommendations professional agricultural diagnosis ka replacement nahi hain.
+---
+
+## 🎓 University Project Explanation
+
+Agar project ko college/university ke saamne short me explain karna ho, toh:
+
+> **PlantCare AI ek Android-based plant health assistant hai. Is application me TensorFlow Lite ka use karke plant image ka on-device classification kiya jata hai. Prediction aur confidence score ko secure Cloudflare Worker backend ke through Groq ke Large Language Model ko bheja jata hai. LLM user ke liye symptoms, treatment, prevention aur general plant-care guidance generate karta hai. Is tarah project on-device machine learning aur LLM technology ko combine karta hai.**
+
+---
+
+## 👨‍💻 Project Architecture in One Line
+
+> **On-Device ML for plant disease detection + Cloudflare backend + Groq LLM for intelligent plant-care advisory.**
+
+---
+
+## ⚠️ Important Disclaimer
+
+PlantCare AI educational aur informational purpose ke liye banaya gaya hai.
+
+Application ke predictions aur recommendations professional agricultural diagnosis ka replacement nahi hain.
 
 Severe plant disease, large-scale crop loss, chemical treatment, ya high-risk agricultural situation me qualified agricultural expert ki advice lena recommended hai.
 
 ---
 
-# 🔒 Secrets and Environment Variables
+## 🔒 Secrets and Environment Variables
 
 Sensitive credentials repository me commit nahi karne chahiye.
 
@@ -688,7 +694,7 @@ Android application me Groq API key store nahi ki jati.
 
 ---
 
-# ☁️ Cloudflare Worker Configuration
+## ☁️ Cloudflare Worker Configuration
 
 Worker source:
 
@@ -716,47 +722,7 @@ worker.js
 
 ---
 
-# 🔄 Data Flow Summary
-
-Simple language me complete system:
-
-```text
-User Plant Photo
-       ↓
-Android App
-       ↓
-TensorFlow Lite
-       ↓
-Plant / Disease Prediction
-       ↓
-Confidence Score
-       ↓
-Cloudflare Worker
-       ↓
-Groq LLM
-       ↓
-LLM Generated Guidance
-       ↓
-Android Advisory Screen
-```
-
----
-
-# 🎓 University Project Explanation
-
-Agar project ko college/university ke saamne short me explain karna ho, toh:
-
-> **PlantCare AI ek Android-based plant health assistant hai. Is application me TensorFlow Lite ka use karke plant image ka on-device classification kiya jata hai. Prediction aur confidence score ko secure Cloudflare Worker backend ke through Groq ke Large Language Model ko bheja jata hai. LLM user ke liye symptoms, treatment, prevention aur general plant-care guidance generate karta hai. Is tarah project on-device machine learning aur LLM technology ko combine karta hai.**
-
----
-
-# 👨‍💻 Project Architecture in One Line
-
-> **On-Device ML for plant disease detection + Cloudflare backend + Groq LLM for intelligent plant-care advisory.**
-
----
-
-# 🌿 Final Summary
+## 🌿 Final Summary
 
 PlantCare AI ka main idea simple hai:
 
@@ -782,7 +748,7 @@ Goal hai:
 
 ---
 
-# ⭐ Project Status
+## ⭐ Project Status
 
 **Status: Demo Ready ✅**
 
@@ -807,8 +773,4 @@ Real Device Testing ✅
 
 ### *See the plant. Understand the problem. Get the guidance.*
 
-```
 Made for learning, experimentation and plant-care assistance.
-```
-```
-Ye university ke liye much cleaner explanation hai.
